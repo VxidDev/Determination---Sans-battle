@@ -289,7 +289,7 @@ for platform in range(platform_count):
             "sprite_size": (20, 100)
         }
 
-currentAttack = 1
+currentAttack = 0
 
 slashFrames = []
 for i in range(6):
@@ -368,26 +368,28 @@ legsTick = None
 
 headX , headY = sans_x , 0
 headAnimIndex = 0
-headAnim = [(100 , "x") , (250 , "y") , (100 , "x") , (-300 , "x") , (-250 , "y") , (100 , "x")]
+headAnim = [(70, "x"), (89, "y"), (70, "x"), (89, "y"), (70, "x"), (-136, "y"), (-70, "y"), (-70, "x"), (-70, "x"), (89, "y"),
+ (-70, "x"), (89, "y"), (-70, "x"), (89, "y"), (-70, "x"), (-136, "y"), (70, "x"), (-61, "y"), (70, "x"), (-42, "y")]
 headOffsetY = 0
 headOffsetX = 0
 
 torsoX , torsoY = sans_x - 46 , 100
 torsoAnimIndex = 0
-torsoAnim = [(100 , "x") , (50 , "y") , (100 , "x") , (-300 , "x") , (-50 , "y") , (100 , "x")]
+torsoAnim = [(70, "x"), (89, "y"), (70, "x"), (89, "y"), (70, "x"), (-136, "y"), (-70, "y"), (-70, "x"), (-70, "x"), (89, "y"),
+ (-70, "x"), (89, "y"), (-70, "x"), (89, "y"), (-70, "x"), (-136, "y"), (70, "x"), (-61, "y"), (70, "x"), (-42, "y")]
 torsoOffsetY = 0
 torsoOffsetX = 0
 
 legsX , legsY = sans_x - 15 , 200
 legsAnimIndex = 0
-legsAnim = [(15 , "x") , (-15 , "x")]
+legsAnim = [(0 , "x") , (0 , "y")]
 legsOffsetY = 0
 legsOffsetX = 0
 
 attackPosSet = None 
 textTick = None
 
-text = "This is pissing me off."
+text = "You  feel  like   you're   going   to\n    have   a   bad   time."
 textAnim = 0
 
 active_attacks = []
@@ -408,7 +410,6 @@ def setDefense():
     attacked = False
     mode = "defense"
     hitTick = None
-
 
 while running:
     deltatime = clock.tick(60) / 1000
@@ -523,7 +524,7 @@ while running:
 
     if hitTick:
         allowedToChooseButton = False
-        if tick_time - hitTick >= 400:
+        if tick_time - hitTick >= 1200:
             sansPose = "normal"
         if tick_time - hitTick >= 1500:
             mode = "defense"
