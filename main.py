@@ -22,6 +22,8 @@ class wall:
 
 walls = [wall(400 , 310 , 10 , 300) , wall(700 , 300 , 10 , 300) , wall(400 , 300 , 300 , 10) , wall(410 , 600 , 300 , 10)]
 
+# Loading Assets
+
 FightMenuAssets = {}
 FightMenuOrder = ["FIGHT" , "ACT" , "ITEM" , "MERCY"]
 for name in FightMenuOrder:
@@ -64,16 +66,21 @@ for file in pathlib.Path("assets/sans/legs").iterdir():
 current_sans_frame = 0
 
 SansSpritesAttack = {}
-for attack in ["bone"]:
+SansAttacks = ["bone" , "blaster/blaster_idle"]
+#SansAttacks.extend([f"blaster/blaster_active_{i}" for i in range(1 , 4)])
+#SansAttacks.extend([f"blaster/blaster_prepare_{i}" for i in range(1 , 3)])
+for attack in SansAttacks:
     sprite = pygame.image.load(f"assets/sans/attacks/{attack}.png").convert_alpha()
-    sprite = pygame.transform.scale(sprite , (20 , 200))
+    size = (20 , 200) if attack == "bone" else (200 , 200)
+    sprite = pygame.transform.scale(sprite , size)
     sprite.set_colorkey((0 , 0 , 0))
     hitbox = sprite.get_rect()
     SansSpritesAttack[attack] = {"sprite": sprite , "hitbox": hitbox}
 
 SansSounds = {}
-for sound in ["MEGALOVANIA"]:
-    SansSounds[sound] = pygame.mixer.music.load(f"assets/sans/sounds/{sound}.mp3")
+pygame.mixer.music.load("assets/sans/sounds/MEGALOVANIA.mp3")
+for sound in ["blaster"]:
+    SansSounds[sound] = pygame.mixer.Sound(f"assets/sans/sounds/{sound}.mp3")
 
 battle = True
 played_theme = False
@@ -85,6 +92,8 @@ hpText = font.render(f"{soul.hp}/92" , True , (255 , 255 , 255) , None)
 krText = font.render("KR" , True , (255 , 255 , 255) , None)
 
 bar = pygame.Rect(450 , 655 , soul.hp * 2, 50)
+
+# functions
 
 def damageSoul(amount):
     global bar , hpText , soul
@@ -216,6 +225,36 @@ def loadConfig():
         nameSelection()
         loadConfig()
 
+def setMenu():
+    global lastChangedAttackBarFrameTick , missDelay , mode , selected_button , attackBar_x , attackBar_speed , allowedToChooseButton , defenseCooldown , allowedToMove , attacked , attemptedToHit , hitTick , slashAnimationTick , sansDodgeTick
+    mode = "menu"
+    selected_button = 0
+    attackBar_speed = 900
+    attackBar_x = 1050
+    allowedToChooseButton = True
+    defenseCooldown = None
+    allowedToMove = False
+    attacked = False
+    attemptedToHit = False
+    hitTick = None
+    slashAnimationTick = None
+    sansDodgeTick = None
+    missDelay = None
+    lastChangedAttackBarFrameTick = None
+
+def healSoul(amount):
+    global soul , hpText , bar
+    channels[15].play(pygame.mixer.Sound("assets/gui/heal.mp3"))
+    soul.hp = min(92 , soul.hp + amount)
+    hpText = font.render(f"{soul.hp}/92" , True , (255 , 255 , 255) , None)
+    bar = pygame.Rect(450 , 655 , soul.hp * 2, 50)
+
+def setDefense():
+    global attacked , mode , hitTick
+    attacked = False
+    mode = "defense"
+    hitTick = None
+
 loadConfig()
 
 if isinstance(config["name"] , int) or len(config["name"]) > 6:
@@ -244,6 +283,10 @@ attacks = {
     0: {
     },
     1: {
+    },
+    2: {
+    },
+    3: {
     }
 }
 
@@ -260,7 +303,7 @@ for i in range(1, 90):
     attacks[0][f"{i}"] = {
         "type": "bone",
         "pos": (x, y),
-        "speed_x": 750,
+        "speed_x": 850,
         "speed_y": 0,
         "hitbox_size": (50, 155),
         "sprite_size": (50, 600)
@@ -289,7 +332,15 @@ for platform in range(platform_count):
             "sprite_size": (20, 100)
         }
 
-currentAttack = 0
+attacks[3]["1"] = {
+    "type": "blaster/blaster_idle",
+    "pos": (500 , 100),
+    "speed_x": 0,
+    "speed_y": 0,
+    "hitbox_size": (0 , 0)
+}
+
+currentAttack = 3
 
 slashFrames = []
 for i in range(6):
@@ -309,7 +360,7 @@ missedY = 100
 attackBarSprites = []
 for color in ["B" , "W"]:
     sprite = pygame.image.load(f"assets/gui/attackPole_{color}.png").convert_alpha()
-    sprite = pygame.transform.scale(sprite , (50 , 300))
+    sprite = pygame.transform.scale(sprite , (30 , 300))
     attackBarSprites.append(sprite)
 attackBar_x = 1050
 
@@ -343,23 +394,6 @@ defenseCooldown = None
 
 isAttacking = False
 torso_offset_fix = 0
-
-def setMenu():
-    global lastChangedAttackBarFrameTick , missDelay , mode , selected_button , attackBar_x , attackBar_speed , allowedToChooseButton , defenseCooldown , allowedToMove , attacked , attemptedToHit , hitTick , slashAnimationTick , sansDodgeTick
-    mode = "menu"
-    selected_button = 0
-    attackBar_speed = 900
-    attackBar_x = 1050
-    allowedToChooseButton = True
-    defenseCooldown = None
-    allowedToMove = False
-    attacked = False
-    attemptedToHit = False
-    hitTick = None
-    slashAnimationTick = None
-    sansDodgeTick = None
-    missDelay = None
-    lastChangedAttackBarFrameTick = None
 
 sansPose = "normal"
 headTick = None
@@ -395,21 +429,11 @@ textAnim = 0
 active_attacks = []
 spawned_attacks = {}
 
+rayLenght = None
+raySpeed = 0
+
 pygame.mixer.set_num_channels(16)
 channels = [pygame.mixer.Channel(i) for i in range(16)]
-
-def healSoul(amount):
-    global soul , hpText , bar
-    channels[15].play(pygame.mixer.Sound("assets/gui/heal.mp3"))
-    soul.hp = min(92 , soul.hp + amount)
-    hpText = font.render(f"{soul.hp}/92" , True , (255 , 255 , 255) , None)
-    bar = pygame.Rect(450 , 655 , soul.hp * 2, 50)
-
-def setDefense():
-    global attacked , mode , hitTick
-    attacked = False
-    mode = "defense"
-    hitTick = None
 
 while running:
     deltatime = clock.tick(60) / 1000
@@ -431,7 +455,7 @@ while running:
     
     if not headTick:
         headTick = pygame.time.get_ticks()
-    if tick_time - headTick >= 100:
+    if tick_time - headTick >= 50:
         if headAnim[headAnimIndex][1] == "y":
             headOffsetY += headAnim[headAnimIndex][0] * deltatime
         else:
@@ -446,7 +470,7 @@ while running:
 
     if not torsoTick:
         torsoTick = pygame.time.get_ticks()
-    if tick_time - torsoTick >= 100:
+    if tick_time - torsoTick >= 50:
         if torsoAnim[torsoAnimIndex][1] == "y":
             torsoOffsetY += torsoAnim[torsoAnimIndex][0] * deltatime
         else:
@@ -461,7 +485,7 @@ while running:
 
     if not legsTick:
         legsTick = pygame.time.get_ticks()
-    if tick_time - legsTick >= 100:
+    if tick_time - legsTick >= 50:
         if legsAnim[legsAnimIndex][1] == "y":
             legsOffsetY += legsAnim[legsAnimIndex][0] * deltatime
         else:
@@ -636,12 +660,28 @@ while running:
             screen.blit(sprite, attack["hitbox"])
             if soul.hitbox.colliderect(attack["hitbox"]):
                 damageSoul(1)
+            
+            if attack["type"] == "blaster/blaster_idle":
+                if not rayLenght:
+                    rayLenght = 0
+                    raySpeed = 50 * deltatime
+                    SansSounds["blaster"].play()
+                rayLenght += raySpeed * deltatime
+                raySpeed += 1500 * deltatime
+                ray = pygame.Rect(attack["hitbox"].x + 75, attack["hitbox"].y + 200, 50 , rayLenght)
+                pygame.draw.rect(screen , (255 , 255 , 255) , ray)
+                if soul.hitbox.colliderect(ray):
+                    damageSoul(1)
 
         if all(a["hitbox"].x > 800 for a in spawned_attacks[currentAttack]):
             spawned_attacks.pop(currentAttack)
             currentAttack += 1
             setMenu()
         elif all(a["hitbox"].y < 0 for a in spawned_attacks[currentAttack]):
+            spawned_attacks.pop(currentAttack)
+            currentAttack += 1
+            setMenu()
+        elif rayLenght > 5000:
             spawned_attacks.pop(currentAttack)
             currentAttack += 1
             setMenu()
@@ -750,9 +790,6 @@ text_sound = pygame.mixer.Sound("assets/gui/textAsg.mp3")
 main_text = text
 name_text = config["name"] + "!"
 determined_text = " Stay determined..."
-
-
-
 
 for i, direction in enumerate(directions):
     sprite = pygame.image.load(f"assets/gameover/SoulPiece_{i+1}.png")
